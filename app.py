@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
+import os
 
 app = Flask(__name__)
 
@@ -8,7 +9,7 @@ ENV = 'dev'
 
 if ENV == 'dev':
     app.debug = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:123456@localhost/lexus'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Android9@127.0.0.1/lexus'
 else:
     app.debug = False
     app.config['SQLALCHEMY_DATABASE_URI'] = ''
@@ -31,6 +32,10 @@ class Feedback(db.Model):
         self.rating = rating
         self.comments = comments
 
+    with app.app_context():
+        db.create_all()
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -42,11 +47,26 @@ def submit():
         customer = request.form['customer']
         dealer = request.form['dealer']
         rating = request.form['rating']
-        commemts = request.form['comments']
+        comments = request.form['comments']
         #print(customer, dealer, rating,commemts)
         if customer == '' or dealer == '':
-            return render_template
-        return render_template('success.html')
+            return render_template('index.html', message='Please enter required fields')
+        if db.session.query(Feedback).filter(Feedback.customer == customer).count() == 0:
+            data = Feedback(customer, dealer, rating, comments)
+            db.session.add(data)
+            db.session.commit()
+
+            return render_template('success.html')
+        else:
+            return render_template('index.html', message='You have already submitted feedback')
+
+
+
+@app.route('/create')
+def create():
+    with app.app_context():
+        db.create_all()
+    return "All table created"
 
 if __name__ == '__main__':
     app.debug = True
